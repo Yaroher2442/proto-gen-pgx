@@ -1,0 +1,94 @@
+syntax = "proto3";
+
+import "descriptor.proto";
+import "google/protobuf/timestamp.proto";
+
+message User {
+    option (messagedb.schema) = {
+        table_name: "users"
+    };
+
+    string id = 1;
+    string user_name = 2 [(messagedb.column) = {
+        name: "user_name",
+        constraints: CONSTRAINT_UNIQUE
+    }];
+
+}
+
+message Product {
+    option (messagedb.schema) = {
+        table_name: "products"
+    };
+    string id = 1;
+    string product_name = 2 [(messagedb.column) = {
+        name: "product_name",
+        constraints: CONSTRAINT_UNIQUE
+    }];
+}
+
+message Cashier {
+    option (messagedb.schema) = {
+        table_name: "cashiers"
+    };
+    string id = 1;
+    string name = 2;
+}
+
+message Order {
+    option (messagedb.schema) = {
+        table_name: "orders"
+    };
+    string id = 1;
+    string user_id = 2 [(messagedb.column) = {
+        constraints: CONSTRAINT_NOT_NULL
+    }];
+    google.protobuf.Timestamp created_at = 3 [(messagedb.column) = {
+        constraints: CONSTRAINT_NOT_NULL
+    }];
+    repeated Product products = 4 [(messagedb.column) = {
+        relation_type: RELATION_MANY_TO_MANY
+    }];
+    Cashier cashier = 5 [(messagedb.column) = {
+        relation_type: RELATION_MANY_TO_ONE
+    }];
+}
+
+option (messagedb.common_queries) = {
+    queries: [
+    {
+        name: "get_user_by_id",
+        sql: "SELECT * FROM users WHERE user_name = $user_name"
+    },
+    {
+        name: "get_all_users",
+        sql: "SELECT * FROM users"
+    }
+    ]
+};
+
+service QueryService {
+    rpc ListUsers (messagedb.Query) returns (messagedb.Result) {
+        option (messagedb.exec) = {
+            query: {
+                sql: "SELECT * FROM users"
+            }
+        };
+    }
+    rpc ListUserOrders (messagedb.Query) returns (messagedb.Result) {
+        option (messagedb.exec) = {
+            transaction:
+            {
+                level: READ_COMMITTED,
+                query_set: [
+                {
+                    ref: "get_user_by_id"
+                },
+                {
+                    sql: "SELECT * FROM orders WHERE user_id = $user_id"
+                }
+                ]
+            }
+        };
+    }
+};

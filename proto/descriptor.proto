@@ -1,0 +1,102 @@
+syntax = "proto3";
+
+package messagedb;
+
+import "google/protobuf/descriptor.proto";
+
+enum EnumStoredAs {
+    ENUM_STORED_AS_INT = 0;
+    ENUM_STORED_AS_STRING = 1;
+}
+
+extend google.protobuf.EnumOptions {
+    EnumStoredAs stored_as = 1000;
+}
+
+enum Constraint {
+    CONSTRAINT_NOT_NULL = 0;       // NOT NULL constraint
+    CONSTRAINT_UNIQUE = 1;         // UNIQUE constraint
+    CONSTRAINT_PRIMARY_KEY = 2;    // PRIMARY KEY constraint
+    CONSTRAINT_FOREIGN_KEY = 3;    // FOREIGN KEY constraint
+    CONSTRAINT_CHECK = 4;         // CHECK constraint
+    CONSTRAINT_DEFAULT = 5;       // DEFAULT value constraint
+}
+
+
+
+enum Relation {
+    RELATION_ONE_TO_ONE = 0;
+    RELATION_ONE_TO_MANY = 1;
+    RELATION_MANY_TO_ONE = 2;
+    RELATION_MANY_TO_MANY = 3;
+}
+
+message ColumnDescriptor {
+    optional string name = 1;
+    optional string column_type = 2;
+    repeated Constraint constraints = 3;
+    optional Relation relation_type = 4;
+}
+
+
+message SchemaOption {
+    string table_name = 2;
+    repeated string annotations = 3;
+}
+
+extend google.protobuf.MethodOptions {
+    string sql = 1000;
+}
+
+extend google.protobuf.MessageOptions {
+    SchemaOption schema = 1000;
+}
+
+extend google.protobuf.FieldOptions {
+    ColumnDescriptor column = 1000;
+}
+
+message CommonQuery {
+    string name = 1;
+    string sql = 2;
+}
+
+message CommonQueries {
+    repeated CommonQuery queries = 1;
+}
+
+extend google.protobuf.FileOptions {
+    CommonQueries common_queries = 1000;
+}
+
+message Result {}
+message Query {}
+
+message MethodQuery {
+    oneof query {
+        string sql = 1;
+        string ref = 2;
+    }
+}
+
+message Transaction {
+    enum Level {
+        READ_UNCOMMITTED = 0;
+        READ_COMMITTED = 1;
+        REPEATABLE_READ = 2;
+        SERIALIZABLE = 3;
+    }
+    repeated MethodQuery query_set = 1;
+    optional Level level = 2;
+}
+
+message ServiceMethodExec {
+    oneof exec {
+        MethodQuery query = 1;
+        Transaction transaction = 2;
+    }
+}
+
+extend google.protobuf.MethodOptions {
+    ServiceMethodExec exec = 1000;
+}
