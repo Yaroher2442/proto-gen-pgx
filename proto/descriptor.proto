@@ -1,8 +1,10 @@
 syntax = "proto3";
 
-package messagedb;
+package gopgx;
 
 import "google/protobuf/descriptor.proto";
+
+option go_package = "./proto";
 
 enum EnumStoredAs {
     ENUM_STORED_AS_INT = 0;
@@ -22,8 +24,6 @@ enum Constraint {
     CONSTRAINT_DEFAULT = 5;       // DEFAULT value constraint
 }
 
-
-
 enum Relation {
     RELATION_ONE_TO_ONE = 0;
     RELATION_ONE_TO_MANY = 1;
@@ -31,21 +31,34 @@ enum Relation {
     RELATION_MANY_TO_MANY = 3;
 }
 
-message ColumnDescriptor {
-    optional string name = 1;
-    optional string column_type = 2;
-    repeated Constraint constraints = 3;
-    optional Relation relation_type = 4;
+message IntType {
+    optional bool serial = 1;
 }
 
+message CharType {
+    optional uint64 size = 1;
+    optional bool is_uuid = 2;
+}
+
+message TimeType {
+    optional bool with_time_zone = 1;
+}
+
+message Column {
+    //    optional ColumnTyped column_type = 2;
+    //    repeated Constraint constraints = 3;
+    //    optional Relation relation_type = 4;
+    repeated Constraint constraints = 1;
+    Relation relation = 2;
+    oneof type {
+        IntType int_type = 3;
+        CharType char_type = 4;
+        TimeType time_type = 5;
+    }
+}
 
 message SchemaOption {
-    string table_name = 2;
     repeated string annotations = 3;
-}
-
-extend google.protobuf.MethodOptions {
-    string sql = 1000;
 }
 
 extend google.protobuf.MessageOptions {
@@ -53,7 +66,7 @@ extend google.protobuf.MessageOptions {
 }
 
 extend google.protobuf.FieldOptions {
-    ColumnDescriptor column = 1000;
+    Column column = 1000;
 }
 
 message CommonQuery {
@@ -65,11 +78,8 @@ message CommonQueries {
     repeated CommonQuery queries = 1;
 }
 
-extend google.protobuf.FileOptions {
-    CommonQueries common_queries = 1000;
-}
-
 message Result {}
+
 message Query {}
 
 message MethodQuery {
@@ -97,6 +107,17 @@ message ServiceMethodExec {
     }
 }
 
+
 extend google.protobuf.MethodOptions {
     ServiceMethodExec exec = 1000;
+}
+
+message FileOptions {
+    CommonQueries common_queries = 1000;
+    string version = 1001;
+    string name = 1002;
+}
+
+extend google.protobuf.FileOptions {
+    FileOptions file_options = 1000;
 }

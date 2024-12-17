@@ -1,0 +1,123 @@
+syntax = "proto3";
+
+package gopgx;
+
+import "google/protobuf/descriptor.proto";
+
+option go_package = "./proto";
+
+enum EnumStoredAs {
+    ENUM_STORED_AS_INT = 0;
+    ENUM_STORED_AS_STRING = 1;
+}
+
+extend google.protobuf.EnumOptions {
+    EnumStoredAs stored_as = 1000;
+}
+
+enum Constraint {
+    CONSTRAINT_NOT_NULL = 0;       // NOT NULL constraint
+    CONSTRAINT_UNIQUE = 1;         // UNIQUE constraint
+    CONSTRAINT_PRIMARY_KEY = 2;    // PRIMARY KEY constraint
+    CONSTRAINT_FOREIGN_KEY = 3;    // FOREIGN KEY constraint
+    CONSTRAINT_CHECK = 4;         // CHECK constraint
+    CONSTRAINT_DEFAULT = 5;       // DEFAULT value constraint
+}
+
+enum Relation {
+    RELATION_ONE_TO_ONE = 0;
+    RELATION_ONE_TO_MANY = 1;
+    RELATION_MANY_TO_ONE = 2;
+    RELATION_MANY_TO_MANY = 3;
+}
+
+message IntType {
+    optional bool serial = 1;
+}
+
+message CharType {
+    optional uint64 size = 1;
+    optional bool is_uuid = 2;
+}
+
+message TimeType {
+    optional bool with_time_zone = 1;
+}
+
+message Column {
+    //    optional ColumnTyped column_type = 2;
+    //    repeated Constraint constraints = 3;
+    //    optional Relation relation_type = 4;
+    repeated Constraint constraints = 1;
+    Relation relation = 2;
+    oneof type {
+        IntType int_type = 3;
+        CharType char_type = 4;
+        TimeType time_type = 5;
+    }
+}
+
+message SchemaOption {
+    repeated string annotations = 3;
+}
+
+extend google.protobuf.MessageOptions {
+    SchemaOption schema = 1000;
+}
+
+extend google.protobuf.FieldOptions {
+    Column column = 1000;
+}
+
+message CommonQuery {
+    string name = 1;
+    string sql = 2;
+}
+
+message CommonQueries {
+    repeated CommonQuery queries = 1;
+}
+
+message Result {}
+
+message Query {}
+
+message MethodQuery {
+    oneof query {
+        string sql = 1;
+        string ref = 2;
+    }
+}
+
+message Transaction {
+    enum Level {
+        READ_UNCOMMITTED = 0;
+        READ_COMMITTED = 1;
+        REPEATABLE_READ = 2;
+        SERIALIZABLE = 3;
+    }
+    repeated MethodQuery query_set = 1;
+    optional Level level = 2;
+}
+
+message ServiceMethodExec {
+    oneof exec {
+        MethodQuery query = 1;
+        Transaction transaction = 2;
+    }
+}
+
+
+extend google.protobuf.MethodOptions {
+    ServiceMethodExec exec = 1000;
+}
+
+message FileOptions {
+    CommonQueries common_queries = 1000;
+    string version = 1001;
+    string name = 1002;
+}
+
+extend google.protobuf.FileOptions {
+    FileOptions file_options = 1000;
+}

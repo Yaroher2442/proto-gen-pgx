@@ -40,6 +40,27 @@ linter_fix: # Запуск линтеров с фиксом где возмож�
 	$(LOCAL_BIN)/golangci-lint cache clean && \
 	$(LOCAL_BIN)/golangci-lint run --fix
 
+.PHONY: .generate-descriptor
+.generate-descriptor:
+	protoc --go_out=./internal/domain/descriptorpb --go_opt=paths=source_relative --proto_path=./proto ./proto/descriptor.proto
+
+.PHONY: build
+build:
+	go build -o cmd/protoc-gen-gopgx ./cmd/protoc-gen-gopgx
+
+examples_files = $(shell find "./examples" -type f -name '*.proto')
+.PHONY: .run_example
+.run_example: # Запуск примера
+	$(MAKE) build
+	rm -rf ./examples/basic/basicpb ./examples/basic/proto/descriptor.proto
+	cp -r ./proto/descriptor.proto ./examples/basic/proto/descriptor.proto
+	mkdir -p ./examples/basic/basicpb
+	protoc --go_out=./examples/basic/basicpb \
+	--go_opt=paths=source_relative \
+	--plugin=./cmd/protoc-gen-gopgx/protoc-gen-gopgx \
+	--gopgx_out=./examples/basic/basicpb \
+	--proto_path=./examples/basic/proto $(examples_files)
+
 branch=main
 .PHONY: revision
 revision: # Создание тега

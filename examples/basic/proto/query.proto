@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+import "descriptor.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "./proto";
+
+option (gopgx.file_options) = {
+    version: "v1.0.0"
+    name: "main"
+};
+
+message User {
+    option (gopgx.schema).annotations = "PRIMARY KEY (id, user_name)";
+    string id = 1 [(gopgx.column).char_type.size = 26];
+    string user_name = 2 [(gopgx.column).constraints = CONSTRAINT_UNIQUE];
+}
+
+message Product {
+    string id = 1 [(gopgx.column).char_type.size = 26];
+    string product_name = 2 [(gopgx.column).constraints = CONSTRAINT_UNIQUE];
+}
+
+message Cashier {
+    string id = 1 [(gopgx.column).char_type.size = 26];
+    string name = 2;
+}
+
+message Order {
+    string id = 1 [(gopgx.column).char_type.size = 26];
+    string user_id = 2 [(gopgx.column).constraints = CONSTRAINT_NOT_NULL, (gopgx.column).char_type.size = 26];
+    google.protobuf.Timestamp created_at = 3 [(gopgx.column).constraints = CONSTRAINT_NOT_NULL];
+    repeated Product products = 4 [(gopgx.column).relation = RELATION_MANY_TO_MANY];
+    Cashier cashier = 5 [(gopgx.column).relation = RELATION_MANY_TO_ONE];
+}
+
+option (gopgx.file_options).common_queries = {
+    queries: [
+    {
+        name: "get_user_by_id",
+        sql: "SELECT * FROM users WHERE user_name = $user_name"
+    },
+    {
+        name: "get_all_users",
+        sql: "SELECT * FROM users"
+    }
+    ]
+};
+
+service QueryService {
+    rpc ListUsers (gopgx.Query) returns (gopgx.Result) {
+        option (gopgx.exec) = {
+            query: {
+                sql: "SELECT * FROM users"
+            }
+        };
+    }
+    rpc ListUserOrders (gopgx.Query) returns (gopgx.Result) {
+        option (gopgx.exec) = {
+            transaction:
+            {
+                level: READ_COMMITTED,
+                query_set: [
+                {
+                    ref: "get_user_by_id"
+                },
+                {
+                    sql: "SELECT * FROM orders WHERE user_id = $user_id"
+                }
+                ]
+            }
+        };
+    }
+};
